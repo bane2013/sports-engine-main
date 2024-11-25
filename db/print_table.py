@@ -3,8 +3,10 @@ import sqlite3
 connection = sqlite3.connect('sports.db')
 c = connection.cursor()
 
+# "sports_data" for table with news articles
+# "image_data" for table with images
+c.execute("SELECT * FROM image_data")
 
-c.execute("SELECT * FROM sports_data")
 # Fetch all rows
 rows = c.fetchall()
 

@@ -73,3 +73,8 @@ button {
 	color: #7fb3fb;
 	text-decoration: none;
 }
+
+.imageResult {
+	border-radius: 10px;
+	margin: 20px;
+}
