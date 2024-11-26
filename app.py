@@ -5,8 +5,19 @@ app = Flask(__name__, template_folder='.')  # Use current directory as template 
 
 @app.route('/')
 def index():
-    # Serve the index.html file
-    return render_template('index.html')
+    """Render the index page with standings data."""
+    conn = sqlite3.connect('sports.db')
+    c = conn.cursor()
+
+    c.execute('SELECT * FROM nba_standings WHERE conference="Eastern"')
+    eastern_standings = c.fetchall()
+
+    c.execute('SELECT * FROM nba_standings WHERE conference="Western"')
+    western_standings = c.fetchall()
+
+    conn.close()
+
+    return render_template('index.html', eastern_standings=eastern_standings, western_standings=western_standings)
 
 @app.route('/search', methods=['GET'])
 def search():
