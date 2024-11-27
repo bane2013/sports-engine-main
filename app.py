@@ -1,5 +1,7 @@
 from flask import Flask, request, jsonify, render_template  # Ensure Flask imports are included
 import sqlite3  # Import sqlite3 for database operations
+from whoosh.qparser import MultifieldParser
+from whoosh.index import open_dir
 
 app = Flask(__name__, template_folder='.')  # Use current directory as template folder
 
@@ -22,18 +24,13 @@ def index():
 @app.route('/search', methods=['GET'])
 def search():
     query = request.args.get('q', '').lower()
-    conn = sqlite3.connect('sports.db')
-    c = conn.cursor()
+    index = open_dir("indexdir")
+    query_parser = MultifieldParser(["title", "description"], index.schema)     # UPDATE LINE TO INCLUDE CONTENT AFTER ADDING THE SCRAPED PAGE CONTENT TO SCHEMA ---------------
 
-    c.execute('''
-    SELECT title, link, description
-    FROM sports_data
-    WHERE LOWER(title) LIKE ? OR LOWER(description) LIKE ?
-    ''', (f'%{query}%', f'%{query}%'))
-    results = c.fetchall()
-    conn.close()
-
-    return jsonify(results)
+    with index.searcher() as searcher:
+        search_query = query_parser.parse(query)
+        results = searcher.search(search_query, limit=10)
+        return jsonify([[r['title'], r['link'], r['description']] for r in results])
 
 @app.route('/imageSearch', methods=['GET'])
 def image_search():
