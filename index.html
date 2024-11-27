@@ -41,51 +41,120 @@
 
     <div id="standings" class="d-none text-center">
         <h2 class="text-white mb-4">NBA Standings</h2>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <h3 class="text-white mb-2">Eastern Conference (NBA)</h3>
+                <table class="table table-bordered text-white">
+                    <thead>
+                        <tr>
+                            <th>Team</th>
+                            <th>Wins</th>
+                            <th>Losses</th>
+                            <th>Win/Loss %</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for team in eastern_nba_standings %}
+                        <tr>
+                            <td style="white-space: nowrap; overflow: hidden; max-width: 500px;">
+                                {{ team[2] }}
+                            </td>
+                            <td>{{ team[3] }}</td>
+                            <td>{{ team[4] }}</td>
+                            <td>{{ team[5] }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+    
+            <div class="col-md-6">
+                <h3 class="text-white mb-2">Western Conference (NBA)</h3>
+                <table class="table table-bordered text-white">
+                    <thead>
+                        <tr>
+                            <th>Team</th>
+                            <th>Wins</th>
+                            <th>Losses</th>
+                            <th style="min-width: 110px;">Win/Loss %</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for team in western_nba_standings %}
+                        <tr>
+                            <td style="white-space: nowrap; overflow: hidden;">
+                                {{ team[2] }}
+                            </td>
+                            <td>{{ team[3] }}</td>
+                            <td>{{ team[4] }}</td>
+                            <td>{{ team[5] }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
 
-<h3 class="text-white mb-2">Eastern Conference</h3>
-<table class="table table-bordered text-white">
-    <thead>
-        <tr>
-            <th>Team</th>
-            <th>Wins</th>
-            <th>Losses</th>
-            <th>Win/Loss %</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for team in eastern_standings %}
-        <tr>
-            <td>{{ team[2] }}</td>
-            <td>{{ team[3] }}</td>
-            <td>{{ team[4] }}</td>
-            <td>{{ team[5] }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-
-<h3 class="text-white mb-2">Western Conference</h3>
-<table class="table table-bordered text-white">
-    <thead>
-        <tr>
-            <th>Team</th>
-            <th>Wins</th>
-            <th>Losses</th>
-            <th>Win/Loss %</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for team in western_standings %}
-        <tr>
-            <td>{{ team[2] }}</td>
-            <td>{{ team[3] }}</td>
-            <td>{{ team[4] }}</td>
-            <td>{{ team[5] }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-
+        <h2 class="text-white mb-4">NHL Standings</h2>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <h3 class="text-white mb-2">Eastern Conference</h3>
+                <table class="table table-bordered text-white">
+                    <thead>
+                        <tr>
+                            <th>Team</th>
+                            <th>Wins</th>
+                            <th>Losses</th>
+                            <th style="min-width: 110px;">OT Losses</th>
+                            <th>Points</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for team in eastern_nhl_standings %}
+                        <tr>
+                            <td style="white-space: nowrap; overflow: hidden; max-width: 500px;">
+                                {{ team[2] }}
+                            </td>
+                            <td>{{ team[3] }}</td>
+                            <td>{{ team[4] }}</td>
+                            <td>{{ team[5] }}</td>
+                            <td>{{ team[6] }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+    
+            <div class="col-md-6">
+                <h3 class="text-white mb-2">Western Conference</h3>
+                <table class="table table-bordered text-white">
+                    <thead>
+                        <tr>
+                            <th>Team</th>
+                            <th>Wins</th>
+                            <th>Losses</th>
+                            <th>OT Losses</th>
+                            <th>Points</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for team in western_nhl_standings %}
+                        <tr>
+                            <td style="white-space: nowrap; overflow: hidden;">
+                                {{ team[2] }}
+                            </td>
+                            <td>{{ team[3] }}</td>
+                            <td>{{ team[4] }}</td>
+                            <td>{{ team[5] }}</td>
+                            <td>{{ team[6] }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
     <script>

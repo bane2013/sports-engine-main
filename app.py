@@ -12,14 +12,22 @@ def index():
     c = conn.cursor()
 
     c.execute('SELECT * FROM nba_standings WHERE conference="Eastern"')
-    eastern_standings = c.fetchall()
+    eastern_nba_standings = c.fetchall()
 
     c.execute('SELECT * FROM nba_standings WHERE conference="Western"')
-    western_standings = c.fetchall()
+    western_nba_standings = c.fetchall()
+
+    c.execute('SELECT * FROM nhl_standings WHERE conference="Eastern"')
+    eastern_nhl_standings = c.fetchall()
+
+    c.execute('SELECT * FROM nhl_standings WHERE conference="Western"')
+    western_nhl_standings = c.fetchall()
 
     conn.close()
 
-    return render_template('index.html', eastern_standings=eastern_standings, western_standings=western_standings)
+    return render_template('index.html',
+                           eastern_nba_standings=eastern_nba_standings, western_nba_standings=western_nba_standings,
+                           eastern_nhl_standings=eastern_nhl_standings, western_nhl_standings=western_nhl_standings)
 
 @app.route('/search', methods=['GET'])
 def search():
