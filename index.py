@@ -9,10 +9,10 @@ import sqlite3
 
 # schema for the index
 schema = Schema(
-     title=TEXT(stored=True, analyzer=StemmingAnalyzer()),
+    title=TEXT(stored=True, analyzer=StemmingAnalyzer()),
     link=ID(stored=True, unique=True),
-    description=TEXT(stored=True, analyzer=StemmingAnalyzer())
-    # UPDATE LINE TO INCLUDE CONTENT AFTER ADDING THE SCRAPED PAGE CONTENT TO SCHEMA ---------------
+    description=TEXT(stored=True, analyzer=StemmingAnalyzer()),
+    content=TEXT(stored=True, analyzer=StemmingAnalyzer())
 )
 
 # create the index and populate it, only if it doesnt exist already
@@ -26,7 +26,7 @@ if not os.path.exists("indexdir"):
     cursor = conn.cursor()
 
     # Fetch articles
-    cursor.execute("SELECT title, link, description FROM sports_data")      # UPDATE LINE TO INCLUDE CONTENT AFTER ADDING THE SCRAPED PAGE CONTENT TO SCHEMA ---------------
+    cursor.execute("SELECT title, link, description, content FROM sports_data")
     articles = cursor.fetchall()
     conn.close()
 
@@ -36,8 +36,8 @@ if not os.path.exists("indexdir"):
 
     # Add article entries into the index
     for article in articles:
-        title, link, description = article      # UPDATE LINE TO INCLUDE CONTENT AFTER ADDING THE SCRAPED PAGE CONTENT TO SCHEMA ---------------
-        writer.add_document(title=title, link=link, description=description)      # UPDATE LINE TO INCLUDE CONTENT AFTER ADDING THE SCRAPED PAGE CONTENT TO SCHEMA ---------------
+        title, link, description, content = article
+        writer.add_document(title=title, link=link, description=description, content=content)
 
     writer.commit()
 
@@ -45,12 +45,13 @@ if not os.path.exists("indexdir"):
 index = open_dir("indexdir")
 searcher = index.searcher()
 
-query_parser = MultifieldParser(["title", "description"], index.schema)      # UPDATE LINE TO INCLUDE CONTENT AFTER ADDING THE SCRAPED PAGE CONTENT TO SCHEMA ---------------
+query_parser = MultifieldParser(["title", "description", "content"], index.schema)
 
 
 with index.searcher() as searcher:
-    query = query_parser.parse("westbrook")
+    query = query_parser.parse("lebron")
     results = searcher.search(query, limit=10)
 
     for result in results:
-        print(f"Title: {result['title']}, Link: {result['link']}")
+        print(f"Link: {result['link']}")
+        print(f"Title: {result['title']}")

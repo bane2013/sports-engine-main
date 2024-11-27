@@ -25,12 +25,12 @@ def index():
 def search():
     query = request.args.get('q', '').lower()
     index = open_dir("indexdir")
-    query_parser = MultifieldParser(["title", "description"], index.schema)     # UPDATE LINE TO INCLUDE CONTENT AFTER ADDING THE SCRAPED PAGE CONTENT TO SCHEMA ---------------
+    query_parser = MultifieldParser(["title", "description", "content"], index.schema)
 
     with index.searcher() as searcher:
         search_query = query_parser.parse(query)
         results = searcher.search(search_query, limit=10)
-        return jsonify([[r['title'], r['link'], r['description']] for r in results])
+        return jsonify([[r.get('title', ''), r.get('link', ''), r.get('description', '')] for r in results])
 
 @app.route('/imageSearch', methods=['GET'])
 def image_search():
