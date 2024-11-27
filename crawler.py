@@ -48,24 +48,55 @@ def crawl_website(url, rules, source_name):
             title = title_element.text.strip() if title_element else None
 
             # Extract the link
-            link_element = item.select_one(rules.get('link_selector'))
-            link = link_element['href'] if link_element and 'href' in link_element.attrs else None
+            try:
+                link = None
+                # Check if the 'href' is in the parent item or within a nested <a> tag
+                if 'href' in item.attrs:  # Case where item itself is an <a> tag
+                    link = item['href']
+                else:  # Case where <a> tag is nested within the item
+                    link_element = item.select_one(rules.get('link_selector'))
+                    link = link_element['href'] if link_element and 'href' in link_element.attrs else None
+
+                # Handle relative links
+                if link and link.startswith('/'):
+                    link = rules['base_url'] + link  # Convert relative to absolute URL
+            except Exception as e:
+                logging.error(f"Error extracting link: {e}")
+                link = None  # Fallback for missing links
+
+            print(f"Extracted Link: {link}")  # Debugging output
+
+            # Handle relative links
+            if link and link.startswith('/'):
+                link = rules['base_url'] + link
 
             # Handle relative links
             if link and link.startswith('/'):
                 link = rules['base_url'] + link
 
             # Extract description if available
-            description = None
-            if rules.get('description_selector'):
-                description_element = item.select_one(rules['description_selector'])
-                description = description_element.text.strip() if description_element else "No Description"
+            try:
+                description = None
+                if rules.get('description_selector'):
+                    # Try to find the description using the selector
+                    description_element = item.select_one(rules['description_selector'])
+                    if description_element:
+                        description = description_element.text.strip()
+                    else:
+                        description = "No Description"
+                else:
+                    description = "No Description"  # Default if selector not provided
+            except Exception as e:
+                logging.error(f"Error extracting description: {e}")
+                description = "No Description"  # Graceful fallback
+
+            print(f"Extracted Description: {description}")  # Debugging
 
             # Save the data to the database
             c.execute('''
                 INSERT INTO sports_data (title, link, description, source)
                 VALUES (?, ?, ?, ?)
-            ''', (title, link, description or "No Description", source_name))
+            ''', (title, link, description, source_name))
             conn.commit()
 
             print(f"Saved: {title} from {source_name}")
@@ -84,21 +115,18 @@ def crawl_website(url, rules, source_name):
 
 # Configuration for NHL.com
 sources = [
-
-#Main Sports Website news!
-
 #NHL.COM SITE FOR NHL NEWS
-    {
-        "name": "NHL",
-        "url": "https://www.nhl.com/news",
-        "rules": {
-            "item_selector": "a.nhl-c-card-wrap",  # Main container for each article
-            "title_selector": "h3.fa-text__title",  # Selector for the title
-            "link_selector": "a.nhl-c-card-wrap",  # Selector for the link
-            "description_selector": "div.fa-text__body",  # Selector for the description
-            "base_url": "https://www.nhl.com"  # Base URL for relative links
-        }
-    },
+{
+    "name": "NHL",
+    "url": "https://www.nhl.com/news",
+    "rules": {
+        "item_selector": "div.d3-l-col__col-2",  # Corrected the main container for each article
+        "title_selector": "h3",  # Correct selector for the title
+        "link_selector": "a",  # Selector for the link
+        "description_selector": "span.fa-text__meta",  # Selector for the meta info, since no specific description element is visible
+        "base_url": "https://www.nhl.com"  # Base URL for relative links
+    }
+},
 
 #NBA.COM SITE FOR NBA NEWS
     {
@@ -114,53 +142,53 @@ sources = [
     },
 
 #NFL.COM SITE FOR NFL NEWS!
-    {
-        "name": "NFL news on NFL!!!!!",
-        "url": "https://www.nfl.com/news/all-news",
-        "rules": {
-            "item_selector": "div.d3-o-media-object.d3-o-media-object--vertical.d3-o-content-tray__card",  # Main container for each article
-            "title_selector": "h3.d3-o-media-object__title",  # Selector for the title
-            "link_selector": "a",  # Selector for the link
-            "description_selector": None,  # No explicit description available
-            "base_url": "https://www.nfl.com"  # Base URL for relative links
-        }
-    },
+{
+    "name": "NFL",
+    "url": "https://www.nfl.com/news/all-news",
+    "rules": {
+        "item_selector": "div.d3-l-col__col-12",  # Adjusted to target the container of the <a> tag
+        "title_selector": "h3.d3-o-media-object__title",  # Selector for the title
+        "link_selector": "a",  # Targets the <a> tag immediately under the item_selector
+        "description_selector": "div.d3-o-media-object__summary",  # Selector for the description
+        "base_url": "https://www.nfl.com"  # Base URL for relative links
+    }
+},
 
 #TheScore.COM SITE FOR NFL NEWS!
     {
-        "name": "NFL",
+        "name": "NFL From TheScore",
         "url": "https://www.thescore.com/nfl/news",
         "rules": {
             "item_selector": "div.masonry__gridItem--3gUaq",  # Main container for each article
             "title_selector": "div.jsx-403783000.title",      # Selector for the title
             "link_selector": "a",                            # Selector for the link
-            "description_selector": None,                    # No description is visible
+            "description_selector": "time",                    # No description is visible
             "base_url": "https://www.thescore.com"           # Base URL for relative links
         }
     },
 
 #TheScore.com SITE FOR NBA NEWS!
     {
-        "name": "NBA news on TheScore",
+        "name": "NBA From TheScore",
         "url": "https://www.thescore.com/nba/news",
         "rules": {
             "item_selector": "div.masonry__gridItem--3gUaq",  # Main container for each article
             "title_selector": "div.jsx-403783000.title",  # Selector for the article title
             "link_selector": "a",  # Selector for the article link
-            "description_selector": None,  # No description available in the HTML
+            "description_selector": "time",  # No description available in the HTML
             "base_url": "https://www.thescore.com"  # Base URL for relative links
         }
     },
 
 #TheScore.com SITE FOR NHL NEWS!
     {
-        "name": "NHL",
+        "name": "NHL From TheScore",
         "url": "https://www.thescore.com/nhl/news",
         "rules": {
             "item_selector": "div.masonry__gridItem--3gUaq",  # Main container for each article
             "title_selector": "div.jsx-403783000.title",  # Selector for the article title
             "link_selector": "a",  # Selector for the article link
-            "description_selector": None,  # No description available in the HTML
+            "description_selector": "time",  # No description available in the HTML
             "base_url": "https://www.thescore.com"  # Base URL for relative links
         }
     }
