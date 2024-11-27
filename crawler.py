@@ -15,11 +15,32 @@ def create_database():
         title TEXT UNIQUE,
         link TEXT,
         description TEXT,
-        source TEXT
+        source TEXT,
+        content TEXT
     )
     ''')
     conn.commit()
     conn.close()
+
+
+def fetch_article_content(link):
+    """Fetch and return the content of the article from the given link."""
+    try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
+        }
+        response = requests.get(link, headers=headers)
+        if response.status_code != 200:
+            print(f"Failed to fetch article content from {link} - Status Code: {response.status_code}")
+            return None
+
+        soup = BeautifulSoup(response.text, 'html.parser')
+        # Customize this selector based on the structure of the articles
+        article_content = soup.get_text(" ", strip=True)  # Fetch all text from the page
+        return article_content
+    except Exception as e:
+        logging.error(f"Error fetching article content from {link}: {e}")
+        return None
 
 
 def crawl_website(url, rules, source_name):
@@ -48,55 +69,30 @@ def crawl_website(url, rules, source_name):
             title = title_element.text.strip() if title_element else None
 
             # Extract the link
-            try:
-                link = None
-                # Check if the 'href' is in the parent item or within a nested <a> tag
-                if 'href' in item.attrs:  # Case where item itself is an <a> tag
-                    link = item['href']
-                else:  # Case where <a> tag is nested within the item
-                    link_element = item.select_one(rules.get('link_selector'))
-                    link = link_element['href'] if link_element and 'href' in link_element.attrs else None
+            link = None
+            if 'href' in item.attrs:
+                link = item['href']
+            else:
+                link_element = item.select_one(rules.get('link_selector'))
+                link = link_element['href'] if link_element and 'href' in link_element.attrs else None
 
-                # Handle relative links
-                if link and link.startswith('/'):
-                    link = rules['base_url'] + link  # Convert relative to absolute URL
-            except Exception as e:
-                logging.error(f"Error extracting link: {e}")
-                link = None  # Fallback for missing links
-
-            print(f"Extracted Link: {link}")  # Debugging output
-
-            # Handle relative links
             if link and link.startswith('/'):
                 link = rules['base_url'] + link
 
-            # Handle relative links
-            if link and link.startswith('/'):
-                link = rules['base_url'] + link
+            # Extract description
+            description = None
+            if rules.get('description_selector'):
+                description_element = item.select_one(rules['description_selector'])
+                description = description_element.text.strip() if description_element else "No Description"
 
-            # Extract description if available
-            try:
-                description = None
-                if rules.get('description_selector'):
-                    # Try to find the description using the selector
-                    description_element = item.select_one(rules['description_selector'])
-                    if description_element:
-                        description = description_element.text.strip()
-                    else:
-                        description = "No Description"
-                else:
-                    description = "No Description"  # Default if selector not provided
-            except Exception as e:
-                logging.error(f"Error extracting description: {e}")
-                description = "No Description"  # Graceful fallback
-
-            print(f"Extracted Description: {description}")  # Debugging
+            # Fetch and scrape content from the link
+            content = fetch_article_content(link) if link else "No Content Available"
 
             # Save the data to the database
             c.execute('''
-                INSERT INTO sports_data (title, link, description, source)
-                VALUES (?, ?, ?, ?)
-            ''', (title, link, description, source_name))
+                INSERT INTO sports_data (title, link, description, source, content)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (title, link, description, source_name, content))
             conn.commit()
 
             print(f"Saved: {title} from {source_name}")
@@ -108,9 +104,6 @@ def crawl_website(url, rules, source_name):
 
     conn.close()
     print(f"Finished crawl for {source_name}")
-
-
-
 
 
 # Configuration for NHL.com
