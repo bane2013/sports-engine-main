@@ -42,5 +42,23 @@ def image_search():
 
     return jsonify(results)
 
+@app.route('/videoSearch', methods=['GET'])
+def video_search():
+    query = request.args.get('q', '').lower()
+    conn = sqlite3.connect('sports.db')
+    c = conn.cursor()
+
+    c.execute('''
+    SELECT title, video_link, thumbnail_link, description
+    FROM video_data
+    WHERE LOWER(title) LIKE ? OR LOWER(description) LIKE ?
+    LIMIT 5
+    ''', (f'%{query}%', f'%{query}%'))
+
+    results = c.fetchall()
+    conn.close()
+
+    return jsonify(results)
+
 if __name__ == '__main__':
     app.run(debug=True)
