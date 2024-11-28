@@ -1,84 +1,126 @@
-import requests
-from bs4 import BeautifulSoup
+
+from flask import Flask, request, jsonify, render_template, redirect, url_for
 import sqlite3
+import os
+
+# Initialize Flask app
+app = Flask(__name__)
+app.config['UPLOAD_FOLDER'] = 'uploads'
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+# Database setup
+DATABASE = 'sports_videos.db'
 
 
-def create_video_table():
-    """Create the database table for storing video data."""
-    conn = sqlite3.connect('sports.db')
-    c = conn.cursor()
-
-    c.execute('''
-    CREATE TABLE IF NOT EXISTS video_data (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT,
-        src TEXT UNIQUE,
-        description TEXT
-    )
-    ''')
-    conn.commit()
-    conn.close()
-
-
-def crawl_videos(url, rules, source_name):
-    """Crawl websites for videos and save data to the database."""
-    print(f"Starting video crawl for {source_name}: {url}")
-
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
-    }
-
-    response = requests.get(url, headers=headers)
-    if response.status_code != 200:
-        print(f"Failed to fetch {url} - Status Code: {response.status_code}")
-        return
-
-    soup = BeautifulSoup(response.text, 'html.parser')
-    items = soup.select(rules['item_selector'])
-    print(f"Found {len(items)} videos on {source_name}")
-
-    conn = sqlite3.connect('sports.db')
-    c = conn.cursor()
-
-    for item in items:
-        try:
-            title = item.select_one(rules['title_selector']).text.strip()
-            src = item.select_one(rules['video_selector'])['src']
-            description = item.select_one(rules['description_selector']).text.strip() if rules.get('description_selector') else "No Description"
-
-            c.execute('''
-            INSERT INTO video_data (title, src, description)
-            VALUES (?, ?, ?)
-            ''', (title, src, description))
-            conn.commit()
-
-            print(f"Saved video: {title}")
-        except sqlite3.IntegrityError:
-            print(f"Skipped duplicate video: {title}")
-        except Exception as e:
-            print(f"Error processing video: {e}")
-
-    conn.close()
-    print(f"Finished video crawl for {source_name}")
+def init_db():
+    """Initialize the SQLite database."""
+    with sqlite3.connect(DATABASE) as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS videos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            description TEXT,
+            tags TEXT,
+            filename TEXT NOT NULL
+        )
+        ''')
+        conn.commit()
 
 
-if __name__ == "__main__":
-    create_video_table()
+@app.route('/')
+def index():
+    """Home page for uploading and searching videos."""
+    return render_template('index.html')
 
-    # Define sources
-    video_sources = [
+
+@app.route('/upload', methods=['POST'])
+def upload_video():
+    """Upload a new video along with metadata."""
+    if 'video' not in request.files:
+        return jsonify({'error': 'No video file uploaded'}), 400
+
+    video_file = request.files['video']
+    title = request.form.get('title')
+    description = request.form.get('description', '')
+    tags = request.form.get('tags', '')
+
+    if not title or not video_file:
+        return jsonify({'error': 'Title and video file are required'}), 400
+
+    # Save the video file
+    video_path = os.path.join(app.config['UPLOAD_FOLDER'], video_file.filename)
+    video_file.save(video_path)
+
+    # Save metadata to the database
+    with sqlite3.connect(DATABASE) as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+        INSERT INTO videos (title, description, tags, filename)
+        VALUES (?, ?, ?, ?)
+        ''', (title, description, tags, video_file.filename))
+        conn.commit()
+
+    return redirect(url_for('index'))
+
+
+@app.route('/search', methods=['GET'])
+def search_videos():
+    """Search for videos by title or tags."""
+    query = request.args.get('query', '')
+    if not query:
+        return jsonify({'error': 'Query parameter is required'}), 400
+
+    with sqlite3.connect(DATABASE) as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+        SELECT id, title, description, tags, filename FROM videos
+        WHERE title LIKE ? OR tags LIKE ?
+        ''', (f'%{query}%', f'%{query}%'))
+        results = cursor.fetchall()
+
+    videos = [
         {
-            "name": "NBA Videos",
-            "url": "https://www.sportingnews.com/ca/nba/news/zach-lavine-addresses-trade-rumours-following-hot-season-start/42d3a8fd7fb6d63dc0d34c2a",
-            "rules": {
-                "item_selector": "body > div.layout-container > main > div.md\:px-3 > div > div > div > div.zephr-feature_hero",
-                "title_selector": "body > div.layout-container > main > div.md\:px-3 > div > div > div > div.zephr-feature_page-title",
-                "video_selector": "#botr_XmfpSu6u_DBRF0kQO_div",
-                "description_selector": "body > div.layout-container > main > div.md\:px-3 > div > div > div > div.zephr-feature_article-content-body"
-                "base_url": "https://www.sportingnews.com"
-            }
+            'id': row[0],
+            'title': row[1],
+            'description': row[2],
+            'tags': row[3],
+            'filename': row[4]
         }
+        for row in results
     ]
 
-    for source in video_sources:
-        crawl_videos(source['url'], source['rules'], source['name'])
+    return jsonify(videos)
+
+
+@app.route('/video/<int:video_id>', methods=['GET'])
+def view_video(video_id):
+    """View details of a single video."""
+    with sqlite3.connect(DATABASE) as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+        SELECT id, title, description, tags, filename FROM videos
+        WHERE id = ?
+        ''', (video_id,))
+        row = cursor.fetchone()
+
+    if row is None:
+        return jsonify({'error': 'Video not found'}), 404
+
+    video = {
+        'id': row[0],
+        'title': row[1],
+        'description': row[2],
+        'tags': row[3],
+        'filename': row[4]
+    }
+
+    return jsonify(video)
+
+
+if __name__ == '__main__':
+    # Initialize database
+    init_db()
+
+    # Start the Flask app
+    app.run(debug=True)
